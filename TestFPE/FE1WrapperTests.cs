@@ -12,9 +12,6 @@ namespace TestFPE
         #region common keys
         static byte[] key = Encoding.Unicode.GetBytes("Here's my secret key!");
         static byte[] tweak = Encoding.Unicode.GetBytes("Here's my tweak");
-
-        Decimal MaxAllowedDecimal = 92233720368547.75807M;
-        Decimal MinAllowedDecimal = -92233720368547.75808M;
         #endregion
 
         #region ulong
@@ -169,6 +166,52 @@ namespace TestFPE
         }
         #endregion
 
+        #region Safe int ranking
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestIntToIntRankingMax()
+        {
+            FPEWrapper.RankIntToSafeInt(FPEWrapper.MaxAllowedSafeInt);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestIntToIntRankingMin()
+        {
+            FPEWrapper.RankIntToSafeInt(FPEWrapper.MinAllowedSafeInt);
+        }
+
+        [TestMethod]
+        public void TestIntToIntRankingMaxMinusOne()
+        {
+            int initial = FPEWrapper.MaxAllowedSafeInt - 1;
+            var rankedValue = FPEWrapper.RankIntToSafeInt(initial);
+            var unrankedValue = FPEWrapper.UnrankSafeIntToInt(rankedValue);
+            Assert.AreEqual(initial, unrankedValue);
+
+        }
+
+        [TestMethod]
+        public void TestIntToIntRankingZero()
+        {
+            int initial = 0;
+            var rankedValue = FPEWrapper.RankIntToSafeInt(initial);
+            var unrankedValue = FPEWrapper.UnrankSafeIntToInt(rankedValue);
+            Assert.AreEqual(initial, unrankedValue);
+
+        }
+
+        [TestMethod]
+        public void TestIntToIntRankingMinPlusOne()
+        {
+            int initial = FPEWrapper.MinAllowedSafeInt + 1;
+            var rankedValue = FPEWrapper.RankIntToSafeInt(initial);
+            var unrankedValue = FPEWrapper.UnrankSafeIntToInt(rankedValue);
+            Assert.AreEqual(initial, unrankedValue);
+
+        }
+        #endregion
+
         #region int
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
@@ -238,6 +281,99 @@ namespace TestFPE
 
             Assert.AreEqual(initial, decryptedValue);
 
+        }
+        #endregion
+
+        #region Safe int
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestSafeIntEncryptionMax()
+        {
+            FPEWrapper.EncryptSafeInt(key, tweak, FPEWrapper.MaxAllowedSafeInt);
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionMaxMinusOne()
+        {
+            int initial = FPEWrapper.MaxAllowedSafeInt - 1;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestSafeIntEncryptionMin()
+        {
+            FPEWrapper.EncryptSafeInt(key, tweak, FPEWrapper.MinAllowedSafeInt);
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionMinPlusOne()
+        {
+            int initial = FPEWrapper.MinAllowedSafeInt + 1;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionMaxMinusTwo()
+        {
+            int initial = FPEWrapper.MaxAllowedSafeInt - 2;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionZero()
+        {
+            int initial = 0;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionMinusOne()
+        {
+            int initial = -1;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+        }
+
+        [TestMethod]
+        public void TestSafeIntEncryptionMinPlusTwo()
+        {
+            int initial = FPEWrapper.MinAllowedSafeInt + 2;
+            var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, initial);
+            var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+
+            Assert.AreEqual(initial, decryptedValue);
+
+        }
+
+        [TestMethod]
+        public void StressTestSafeIntEncryption()
+        {
+            Random r = new Random();
+            int times = 10000;
+            for (int i = 0; i < times; i++)
+            {
+                int plain = r.Next(FPEWrapper.MinAllowedSafeInt, FPEWrapper.MaxAllowedSafeInt);
+                var encryptedValue = FPEWrapper.EncryptSafeInt(key, tweak, plain);
+                var decryptedValue = FPEWrapper.DecryptSafeInt(key, tweak, encryptedValue);
+                Console.WriteLine($"Src:{plain}, Dest:{decryptedValue}");
+                Assert.AreEqual(plain, decryptedValue);
+            }
         }
         #endregion
 
@@ -419,34 +555,34 @@ namespace TestFPE
         [ExpectedException(typeof(ArgumentException))]
         public void TestDecimalEncryptionMax()
         {
-            FPEWrapper.EncryptDecimal(key, tweak, MaxAllowedDecimal);
+            FPEWrapper.EncryptDecimal(key, tweak, FPEWrapper.MaxAllowedDecimal);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void TestDecimalEncryptionMaxMinusOne()
         {
-            FPEWrapper.EncryptDecimal(key, tweak, MaxAllowedDecimal - 0.00001M);
+            FPEWrapper.EncryptDecimal(key, tweak, FPEWrapper.MaxAllowedDecimal - 0.00001M);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void TestDecimalEncryptionMin()
         {
-            FPEWrapper.EncryptDecimal(key, tweak, MinAllowedDecimal);
+            FPEWrapper.EncryptDecimal(key, tweak, FPEWrapper.MinAllowedDecimal);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void TestDecimalEncryptionMinPlusOne()
         {
-            FPEWrapper.EncryptDecimal(key, tweak, MinAllowedDecimal + 0.00001M);
+            FPEWrapper.EncryptDecimal(key, tweak, FPEWrapper.MinAllowedDecimal + 0.00001M);
         }
 
         [TestMethod]
         public void TestDecimalEncryptionMaxMinusTwo()
         {
-            Decimal initial = MaxAllowedDecimal - 0.00002M;
+            Decimal initial = FPEWrapper.MaxAllowedDecimal - 0.00002M;
             var encryptedValue = FPEWrapper.EncryptDecimal(key, tweak, initial);
             var decryptedValue = FPEWrapper.DecryptDecimal(key, tweak, encryptedValue);
 
@@ -527,7 +663,7 @@ namespace TestFPE
         [TestMethod]
         public void TestDecimalEncryptionMinPlusTwo()
         {
-            Decimal initial = MinAllowedDecimal + 0.00002M;
+            Decimal initial = FPEWrapper.MinAllowedDecimal + 0.00002M;
             var encryptedValue = FPEWrapper.EncryptDecimal(key, tweak, initial);
             var decryptedValue = FPEWrapper.DecryptDecimal(key, tweak, encryptedValue);
 

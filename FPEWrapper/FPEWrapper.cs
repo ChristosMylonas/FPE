@@ -93,6 +93,27 @@ namespace FPELibrary
             int result = (int)(source - BASE_RANKING_VALUE);
             return result;
         }
+
+        public const int MaxAllowedSafeInt = 1073741823;
+        public const int MinAllowedSafeInt = -1073741823;
+        const int BASE_INT_RANKING_VALUE = MaxAllowedSafeInt;
+        public static int RankIntToSafeInt(int source)
+        {
+            if (source >= MaxAllowedSafeInt)
+                throw new ArgumentException($"source should be less than {MaxAllowedSafeInt}");
+
+            if (source <= MinAllowedSafeInt)
+                throw new ArgumentException($"source should be greater than {MinAllowedSafeInt}");
+
+            int result = (source + BASE_INT_RANKING_VALUE);
+            return result;
+        }
+
+        public static int UnrankSafeIntToInt(int source)
+        {
+            int result = source - BASE_INT_RANKING_VALUE;
+            return result;
+        }
         #endregion
 
         #region int
@@ -115,6 +136,29 @@ namespace FPELibrary
         {
             uint result = DecryptUInt(key, tweak, source);
             int unrankedValue = UnrankInt(result);
+
+
+            return unrankedValue;
+        }
+
+        public static int EncryptSafeInt(byte[] key, byte[] tweak, int source)
+        {
+            if (source >= MaxAllowedSafeInt)
+                throw new ArgumentException($"source should be less than {MaxAllowedSafeInt}");
+
+            if (source <= MinAllowedSafeInt)
+                throw new ArgumentException($"source should be greater than {MinAllowedSafeInt}");
+
+            int rankedValue = RankIntToSafeInt(source);
+            int result = (int) EncryptUInt(key, tweak, (uint) rankedValue, int.MaxValue-1 );
+
+            return result;
+        }
+
+        public static int DecryptSafeInt(byte[] key, byte[] tweak, int safeIntSource)
+        {
+            int result = (int) DecryptUInt(key, tweak, (uint)safeIntSource, int.MaxValue-1);
+            int unrankedValue = UnrankSafeIntToInt(result);
 
 
             return unrankedValue;
@@ -195,6 +239,9 @@ namespace FPELibrary
         #endregion
 
         #region decimal
+        public static Decimal MaxAllowedDecimal = 92233720368547.75807M;
+        public static Decimal MinAllowedDecimal = -92233720368547.75808M;
+
         public static Decimal EncryptDecimal(byte[] key, byte[] tweak, Decimal source)
         {
             var roundedSource = Math.Round(source, 5);
