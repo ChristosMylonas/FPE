@@ -73,7 +73,7 @@ namespace FPELibrary
             return (uint)result;
         }
         #endregion
-        
+
         #region int ranking
         const int BASE_RANKING_VALUE = int.MinValue + 1;
         public static uint RankInt(int source)
@@ -150,14 +150,14 @@ namespace FPELibrary
                 throw new ArgumentException($"source should be greater than {MinAllowedSafeInt}");
 
             int rankedValue = RankIntToSafeInt(source);
-            int result = (int) EncryptUInt(key, tweak, (uint) rankedValue, int.MaxValue-1 );
+            int result = (int)EncryptUInt(key, tweak, (uint)rankedValue, int.MaxValue - 1);
 
             return result;
         }
 
         public static int DecryptSafeInt(byte[] key, byte[] tweak, int safeIntSource)
         {
-            int result = (int) DecryptUInt(key, tweak, (uint)safeIntSource, int.MaxValue-1);
+            int result = (int)DecryptUInt(key, tweak, (uint)safeIntSource, int.MaxValue - 1);
             int unrankedValue = UnrankSafeIntToInt(result);
 
 
@@ -220,7 +220,7 @@ namespace FPELibrary
                 throw new ArgumentException($"source should be less than {MaxPossibleDate}");
 
             ulong ticks = (ulong)source.Ticks;
-            ulong maxTicks = (ulong) new DateTime(2999, 12, 31).Ticks;
+            ulong maxTicks = (ulong)new DateTime(2999, 12, 31).Ticks;
 
             var result = EncryptULong(key, tweak, ticks, maxTicks);
 
@@ -235,6 +235,39 @@ namespace FPELibrary
             var result = DecryptULong(key, tweak, ticks, maxTicks);
 
             return new DateTime((long)result);
+        }
+        #endregion
+
+        #region DateTime
+        public static DateTime MinPossibleSqlDate = new DateTime(1753, 1, 1);
+        public static DateTime MaxPossibleSqlDate = new DateTime(2999, 12, 31);
+        static DateTime MaxPossibleSqlDateInternal = new DateTime(2999, 12, 31, 23, 59, 59);
+        public static DateTime EncryptSqlDateTime(byte[] key, byte[] tweak, DateTime source)
+        {
+            if (source > MaxPossibleSqlDate)
+                throw new ArgumentException($"source should be less than {MaxPossibleSqlDate}");
+
+            if (source < MinPossibleSqlDate)
+                throw new ArgumentException($"source should be greater than {MinPossibleSqlDate}");
+
+            ulong ticks = (ulong)source.Ticks - (ulong)MinPossibleSqlDate.Ticks;
+            ulong maxTicks = (ulong)MaxPossibleSqlDateInternal.Ticks - (ulong)MinPossibleSqlDate.Ticks;
+
+            var result = EncryptULong(key, tweak, ticks, maxTicks);
+            var adjusted = result + (ulong)MinPossibleSqlDate.Ticks;
+
+            return new DateTime((long)adjusted);
+        }
+
+        public static DateTime DecryptSqlDateTime(byte[] key, byte[] tweak, DateTime source)
+        {
+            ulong ticks = (ulong)source.Ticks;
+            var adjusted = ticks - (ulong)MinPossibleSqlDate.Ticks;
+            ulong maxTicks = (ulong)MaxPossibleSqlDateInternal.Ticks - (ulong)MinPossibleSqlDate.Ticks;
+
+            var result = DecryptULong(key, tweak, adjusted, maxTicks);
+            var rankedResult = result + (ulong)MinPossibleSqlDate.Ticks;
+            return new DateTime((long)rankedResult);
         }
         #endregion
 

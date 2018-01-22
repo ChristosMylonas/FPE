@@ -3,6 +3,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Numerics;
 using FPELibrary;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace TestFPE
 {
@@ -550,6 +552,78 @@ namespace TestFPE
         }
         #endregion
 
+        #region SqlDateTime
+        [TestMethod]
+        public void TestSqlDateEncryption()
+        {
+            var plain = DateTime.Now;
+
+            DateTime enc = FPEWrapper.EncryptSqlDateTime(key, tweak, plain);
+            DateTime dec = FPEWrapper.DecryptSqlDateTime(key, tweak, enc);
+
+            Assert.AreEqual(plain, dec);
+
+        }
+
+        [TestMethod]
+        public void TestSqlDateEncryption2()
+        {
+            var plain = new DateTime(1984, 10, 1);
+
+            DateTime enc = FPEWrapper.EncryptSqlDateTime(key, tweak, plain);
+            DateTime dec = FPEWrapper.DecryptSqlDateTime(key, tweak, enc);
+
+            Assert.AreEqual(plain, dec);
+
+        }
+
+        [TestMethod]
+        public void TestSqlDateEncryptionMin()
+        {
+            var plain = FPEWrapper.MinPossibleSqlDate;
+
+            DateTime enc = FPEWrapper.EncryptSqlDateTime(key, tweak, plain);
+            DateTime dec = FPEWrapper.DecryptSqlDateTime(key, tweak, enc);
+
+            Assert.AreEqual(plain, dec);
+        }
+
+        [TestMethod]
+        public void TestSqlDateEncryptionMax()
+        {
+            var plain = FPEWrapper.MaxPossibleSqlDate;
+
+            DateTime enc = FPEWrapper.EncryptSqlDateTime(key, tweak, plain);
+            DateTime dec = FPEWrapper.DecryptSqlDateTime(key, tweak, enc);
+
+            Assert.AreEqual(plain, dec);
+        }
+
+        [TestMethod]
+        public void StressTestSqlDateEncryption()
+        {
+            Random r = new Random();
+            int times = 10000;
+            for (int i = 0; i < times; i++)
+            {
+                int year = r.Next(1900, 2020);
+                int month = r.Next(1, 12);
+                int date = r.Next(1, 28);
+
+                int hour = r.Next(0, 23);
+                int minute = r.Next(0, 59);
+                int sec = r.Next(0, 59);
+                int ms = r.Next(0, 999);
+                var plain = new DateTime(year, month, date, hour, minute, sec, ms);
+
+                DateTime enc = FPEWrapper.EncryptSqlDateTime(key, tweak, plain);
+                DateTime dec = FPEWrapper.DecryptSqlDateTime(key, tweak, enc);
+                Console.WriteLine($"Src:{enc}, Dest:{dec}");
+                Assert.AreEqual(plain, dec);
+            }
+        }
+        #endregion
+
         #region Decimal
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
@@ -702,6 +776,19 @@ namespace TestFPE
             return result.ToString();
         }
 
+        public static string GetRandomString(int size, char min, char max)
+        {
+            Random r = new Random(DateTime.Now.Millisecond);
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < size; i++)
+            {
+                var randomChar = r.Next(min, max);
+                result.Append(Convert.ToChar(randomChar));
+            }
+
+            return result.ToString();
+        }
+
         [TestMethod]
         public void TestStringEncryption()
         {
@@ -731,6 +818,103 @@ namespace TestFPE
                 Assert.AreEqual(plain, dec);
                 Assert.AreEqual(plain.Length, dec.Length);
             }
+        }
+
+        public List<string> GetRandomStrings(int size, int stringSize, char min, char max)
+        {
+            HashSet<string> results = new HashSet<string>();
+
+            Random r = new Random();
+            for (int i = 0; i < size; i++)
+            {
+                string s = GetRandomString(stringSize, min, max);
+                while (results.Contains(s))
+                {
+                    s = GetRandomString(stringSize, min, max);
+                }
+                results.Add(s);
+            }
+
+            return results.ToList();
+        }
+
+
+        [TestMethod]
+        public void StressTestStringEncryptionUniqueness()
+        {
+            Dictionary<string, string> results = new Dictionary<string, string>();
+
+
+            int times = 1000;
+            Random r = new Random();
+            List<string> randomInput = GetRandomStrings(times, 20, char.MinValue, char.MaxValue);
+            for (int i = 0; i < times; i++)
+            {
+                var plain = randomInput[i];
+
+                var enc = FPEWrapper.EncryptString(key, tweak, plain);
+                var dec = FPEWrapper.DecryptString(key, tweak, enc);
+                Console.WriteLine($"Src:{enc}, Dest:{dec}");
+                Assert.AreEqual(plain, dec);
+                Assert.AreEqual(plain.Length, dec.Length);
+
+                if (results.ContainsKey(enc))
+                    Assert.Fail($"results already contains Encrypted value:{enc} for Plain text:{results[enc]}");
+                else
+                    results.Add(enc, plain);
+            }
+
+            
+        }
+
+        [TestMethod]
+        public void TestStringEncryptionUniqueness()
+        {
+            Dictionary<string, string> results = new Dictionary<string, string>();
+
+
+            List<string> randomInput = new List<string>()
+            {
+                "01",
+                "02",
+                "03",
+                "04",
+                "05",
+                "06",
+                "07",
+                "08",
+                "09",
+                "1",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "99",
+                "Demo"
+            };
+            for (int i = 0; i < randomInput.Count; i++)
+            {
+                var plain = randomInput[i];
+
+                var enc = FPEWrapper.EncryptString(key, tweak, plain);
+                var dec = FPEWrapper.DecryptString(key, tweak, enc);
+                Console.WriteLine($"Src:{enc}, Dest:{dec}");
+                Assert.AreEqual(plain, dec);
+                Assert.AreEqual(plain.Length, dec.Length);
+
+                if (results.ContainsKey(enc))
+                    Assert.Fail($"results already contains Encrypted value:{enc} for Plain text:{results[enc]}");
+                else
+                    results.Add(enc, plain);
+            }
+
+
         }
         #endregion
     }
